@@ -411,6 +411,13 @@ static bool isReservedName(StringRef path) {
   return false;
 }
 
+static file_type
+fileTypeOfFileAttributes(DWORD dwFileAttributes) {
+  return (dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+    ? file_type::directory_file
+    : file_type::regular_file;
+}
+
 static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
   if (FileHandle == INVALID_HANDLE_VALUE)
     goto handle_status_error;
@@ -440,9 +447,7 @@ static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
     goto handle_status_error;
 
   {
-    file_type Type = (Info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-                         ? file_type::directory_file
-                         : file_type::regular_file;
+    file_type Type = fileTypeOfFileAttributes(Info.dwFileAttributes);
     Result =
         file_status(Type, Info.ftLastAccessTime.dwHighDateTime,
                     Info.ftLastAccessTime.dwLowDateTime,
@@ -698,6 +703,8 @@ std::error_code detail::directory_iterator_increment(detail::DirIterState &it) {
     return ec;
 
   it.CurrentEntry.replace_filename(Twine(directory_entry_path_utf8));
+  it.CurrentEntry.replace_type(fileTypeOfFileAttributes(FindData.dwFileAttributes));
+
   return std::error_code();
 }
 

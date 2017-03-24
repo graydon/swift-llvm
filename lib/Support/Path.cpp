@@ -983,11 +983,10 @@ std::error_code is_other(const Twine &Path, bool &Result) {
   return std::error_code();
 }
 
-void directory_entry::replace_filename(const Twine &filename, file_status st) {
+void directory_entry::replace_filename(const Twine &filename) {
   SmallString<128> path = path::parent_path(Path);
   path::append(path, filename);
   Path = path.str();
-  Status = st;
 }
 
 template <size_t N>

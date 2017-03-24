@@ -735,23 +735,25 @@ std::string getMainExecutable(const char *argv0, void *MainExecAddr);
 /// called.
 class directory_entry {
   std::string Path;
-  mutable file_status Status;
+  file_type Type;
 
 public:
-  explicit directory_entry(const Twine &path, file_status st = file_status())
+  explicit directory_entry(const Twine &path, file_type ty = file_type::type_unknown)
     : Path(path.str())
-    , Status(st) {}
+    , Type(ty) {}
 
   directory_entry() = default;
 
-  void assign(const Twine &path, file_status st = file_status()) {
+  void assign(const Twine &path, file_type ty = file_type::type_unknown) {
     Path = path.str();
-    Status = st;
+    Type = ty;
   }
 
-  void replace_filename(const Twine &filename, file_status st = file_status());
+  void replace_filename(const Twine &filename);
+  void replace_type(file_type T) { Type = T; }
 
   const std::string &path() const { return Path; }
+  file_type type() const { return Type; }
   std::error_code status(file_status &result) const;
 
   bool operator==(const directory_entry& rhs) const { return Path == rhs.Path; }
@@ -858,9 +860,13 @@ public:
     if (State->HasNoPushRequest)
       State->HasNoPushRequest = false;
     else {
-      file_status st;
-      if ((ec = State->Stack.top()->status(st))) return *this;
-      if (is_directory(st)) {
+      file_type Type = State->Stack.top()->type();
+      if (Type == file_type::type_unknown) {
+        file_status st;
+        if ((ec = State->Stack.top()->status(st))) return *this;
+        Type = st.type();
+      }
+      if (Type == file_type::directory_file) {
         State->Stack.push(directory_iterator(*State->Stack.top(), ec));
         if (ec) return *this;
         if (State->Stack.top() != end_itr) {

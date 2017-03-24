@@ -547,6 +547,41 @@ std::error_code detail::directory_iterator_destruct(detail::DirIterState &it) {
   return std::error_code();
 }
 
+/*
+ * Linux glibc defines _DIRENT_HAVE_D_TYPE, Darwin defines
+ * __DARWIN_STRUCT_DIRENTRY. Others may wish to opt-in as available; if
+ * this isn't supported, you wind up calling stat() more often.
+ */
+static file_type
+dirent_type(dirent *d) {
+  file_type Type = file_type::type_unknown;
+#if defined(__DARWIN_STRUCT_DIRENTRY) || defined(_DIRENT_HAVE_D_TYPE)
+  switch (d->d_type) {
+  case DT_DIR:
+    Type = file_type::directory_file;
+    break;
+  case DT_REG:
+    Type = file_type::regular_file;
+    break;
+  case DT_BLK:
+    Type = file_type::block_file;
+    break;
+  case DT_CHR:
+    Type = file_type::character_file;
+    break;
+  case DT_FIFO:
+    Type = file_type::fifo_file;
+    break;
+  case DT_SOCK:
+    Type = file_type::socket_file;
+    break;
+  default:
+    break;
+  }
+#endif
+  return Type;
+}
+
 std::error_code detail::directory_iterator_increment(detail::DirIterState &it) {
   errno = 0;
   dirent *cur_dir = ::readdir(reinterpret_cast<DIR *>(it.IterationHandle));
@@ -558,6 +593,7 @@ std::error_code detail::directory_iterator_increment(detail::DirIterState &it) {
         (name.size() == 2 && name[0] == '.' && name[1] == '.'))
       return directory_iterator_increment(it);
     it.CurrentEntry.replace_filename(name);
+    it.CurrentEntry.replace_type(dirent_type(cur_dir));
   } else
     return directory_iterator_destruct(it);
 
