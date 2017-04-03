@@ -217,6 +217,9 @@ public:
   /// This static method prints all timers and clears them all out.
   static void printAll(raw_ostream &OS);
 
+  /// Prints all timers as JSON key/value pairs, and clears them all out.
+  static const char *printAllJSONValues(raw_ostream &OS, const char *delim);
+
   /// Ensure global timer group lists are initialized. This function is mostly
   /// used by the Statistic code to influence the construction and destruction
   /// order of the global timer lists.
@@ -231,7 +234,6 @@ private:
   void printJSONValue(raw_ostream &OS, const PrintRecord &R,
                       const char *suffix, double Value);
   const char *printJSONValues(raw_ostream &OS, const char *delim);
-  static const char *printAllJSONValues(raw_ostream &OS, const char *delim);
 };
 
 } // end namespace llvm
